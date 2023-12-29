@@ -3,6 +3,7 @@ library bloc_scroll_paging;
 import 'package:flutter/material.dart';
 
 class BlocInfiniteList<T> extends StatefulWidget {
+  ///Helper Widget for infinite scroll
   ///[T] represents the data type of our [itemList],
   const BlocInfiniteList({
     super.key,
@@ -14,6 +15,7 @@ class BlocInfiniteList<T> extends StatefulWidget {
     required this.scrollableWidgetBuilder,
     required this.hasReachedMax,
     required this.pagingCompleted,
+    this.initialPage = 1,
   });
 
   /// list of items to display
@@ -43,6 +45,9 @@ class BlocInfiniteList<T> extends StatefulWidget {
   /// represent when a page is completed loaded
   final bool pagingCompleted;
 
+  /// set initial page, by default is 1
+  final int initialPage;
+
   /// Layout in which the elements will be displayed.
   /// It can be List, Grid or any other type.
   /// Provides [controller], [itemCount],and the [itemBuilder]
@@ -59,12 +64,13 @@ class BlocInfiniteList<T> extends StatefulWidget {
 
 class _BlocInfiniteListState<T> extends State<BlocInfiniteList<T>> {
   final ScrollController _scrollController = ScrollController();
-  int page = 1;
+  late int page;
   bool isPaging = false;
 
   @override
   void initState() {
     super.initState();
+    page = widget.initialPage;
     _scrollController.addListener(_onScroll);
   }
 
@@ -81,6 +87,7 @@ class _BlocInfiniteListState<T> extends State<BlocInfiniteList<T>> {
      if(!isPaging){
        widget.triggerEvent(page);
        isPaging = true;
+       page++;
      }
     }
   }
@@ -95,7 +102,6 @@ class _BlocInfiniteListState<T> extends State<BlocInfiniteList<T>> {
   @override
   Widget build(BuildContext context) {
     if(widget.pagingCompleted){
-      page++;
       isPaging= false;
     }
 
