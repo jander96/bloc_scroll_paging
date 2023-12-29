@@ -13,6 +13,7 @@ class BlocInfiniteList<T> extends StatefulWidget {
     required this.child,
     required this.scrollableWidgetBuilder,
     required this.hasReachedMax,
+    required this.pagingCompleted,
   });
 
   /// list of items to display
@@ -39,6 +40,9 @@ class BlocInfiniteList<T> extends StatefulWidget {
   /// widget that displays items
   final Widget? Function(T) child;
 
+  /// represent when a page is completed loaded
+  final bool pagingCompleted;
+
   /// Layout in which the elements will be displayed.
   /// It can be List, Grid or any other type.
   /// Provides [controller], [itemCount],and the [itemBuilder]
@@ -56,6 +60,7 @@ class BlocInfiniteList<T> extends StatefulWidget {
 class _BlocInfiniteListState<T> extends State<BlocInfiniteList<T>> {
   final ScrollController _scrollController = ScrollController();
   int page = 1;
+  bool isPaging = false;
 
   @override
   void initState() {
@@ -73,8 +78,10 @@ class _BlocInfiniteListState<T> extends State<BlocInfiniteList<T>> {
 
   void _onScroll() {
     if (_isBottom) {
-      widget.triggerEvent(page);
-      page++;
+     if(!isPaging){
+       widget.triggerEvent(page);
+       isPaging = true;
+     }
     }
   }
 
@@ -87,6 +94,11 @@ class _BlocInfiniteListState<T> extends State<BlocInfiniteList<T>> {
 
   @override
   Widget build(BuildContext context) {
+    if(widget.pagingCompleted){
+      page++;
+      isPaging= false;
+    }
+
     final itemCount = widget.hasReachedMax
         ? widget.itemList.length
         : widget.itemList.length + 1;
