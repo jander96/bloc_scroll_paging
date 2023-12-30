@@ -4,6 +4,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:stream_transform/stream_transform.dart';
 
+///Represent a base state of a Paginated view. All your state must inherit
+///from it
 abstract class AsyncPagedState<T, E> {
   abstract final AsyncViewState asyncViewState;
   abstract final PagingStatus pagingStatus;
@@ -24,6 +26,7 @@ enum AsyncViewState {
   success,
   error;
 
+  ///render a widget according to [AsyncViewState] value
   Widget when({
     required Widget Function() idle,
     required Widget Function() loading,
@@ -48,19 +51,41 @@ enum PagingStatus {
 
   get hasReachedMax => this == paginationExhausted;
 }
-
+///Provides an easy and reusable way to request paginated data
+/// from the data layer and output the correct status.
+///
+/// Use generic data. Because Either<L,R> is used for error handling,
+/// it is necessary to specify the [Type] of data that is being paged
+/// and the type of [Error] that can be thrown.
+/// Additionally, since we are using [Bloc],
+/// the [Event] and [State] that the Bloc handles must also be provided.
+/// The state must necessarily inherit from the AsyncPagedState class
 mixin BlocPager<Type, Error, Event,
-State extends AsyncPagedState<Type, Error>> {
-  EventTransformer<E> throttleDroppable<E>(Duration duration) {
+State extends AsyncPagedState<Type, Error>> on Bloc<Event,State> {
+
+  /// transformer to cancel new request while a old request is in process
+  EventTransformer<E> pagerTransformerDrop<E>(Duration duration) {
     return (events, mapper) {
       return droppable<E>().call(events.throttle(duration), mapper);
     };
   }
-
+  /// Is a core function where pagination request is made.
+  /// Sample:
+  /// ```dart
+  /// on<Fetched>((event, emit) {
+  ///       return pager(
+  ///          event: event,
+  ///           emit: emit,
+  ///           useCase: repository.getList,
+  ///          pageSize: event.pageSize,
+  ///           page: event.page);
+  ///     }, transformer: throttleDroppable(throttleDuration));
+  ///```
+  ///
   Future<void> pager(
       {required Event event,
         required Emitter<AsyncPagedState<Type, Error>> emit,
-        required State state,
+        ///Is a function from data layer that return an Either<L,R>
         required Future<Either<Error?, List<Type>>> Function(
             int pageSize, int page)
         useCase,
