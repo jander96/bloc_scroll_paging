@@ -73,7 +73,7 @@ State extends AsyncPagedState<Type, Error>> on Bloc<Event,State> {
     emit(state.copyWith(pagingStatus: PagingStatus.paginating));
     if (state.pagingStatus == PagingStatus.paginationExhausted) return;
     // check if is first loading
-    if (state.asyncValue == const AsyncValue.initial()) {
+    if (state.asyncValue is AsyncInitial<List<Type>>) {
       //emit loading status
       emit(state.copyWith(asyncValue: const AsyncValue.loading()));
       final response = await useCase(pageSize, page);
