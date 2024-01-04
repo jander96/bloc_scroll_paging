@@ -97,7 +97,7 @@ State extends AsyncPagedState<Type, Error>> on Bloc<Event,State> {
         return emit((data.isEmpty || data.length < pageSize)
             ? state.copyWith(pagingStatus: PagingStatus.paginationExhausted)
             : state.copyWith(
-          asyncValue: AsyncData([...state.asyncValue.getOrNull!.value, ...data]) ,
+          asyncValue: AsyncData([...state.asyncValue.valueOrNull ?? [], ...data]) ,
           pagingStatus: PagingStatus.paginationCompleted,
         ));
       });
