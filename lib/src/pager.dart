@@ -7,13 +7,8 @@ import 'package:stream_transform/stream_transform.dart';
 ///Represent a base state of a Paginated view. All your state must inherit
 ///from it
 abstract class AsyncPagedState<T, E> {
-  final AsyncValue<List<T>>  asyncValue ;
-  final PagingStatus  pagingStatus;
-
-  AsyncPagedState({
-    this.asyncValue = const AsyncInitial(),
-    this.pagingStatus = PagingStatus.idle
-  });
+  abstract final AsyncValue<List<T>> asyncValue;
+  abstract final PagingStatus pagingStatus;
 
   AsyncPagedState<T, E> copyWith({
     AsyncValue<List<T>>? asyncValue,
