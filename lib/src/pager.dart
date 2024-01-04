@@ -1,45 +1,21 @@
 import 'package:bloc_concurrency/bloc_concurrency.dart';
+import 'package:bloc_scroll_paging/src/async_value/async_value.dart';
 import 'package:dartz/dartz.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:stream_transform/stream_transform.dart';
 
 ///Represent a base state of a Paginated view. All your state must inherit
 ///from it
 abstract class AsyncPagedState<T, E> {
-  abstract final AsyncViewState asyncViewState;
+  abstract final AsyncValue<List<T>> asyncValue;
   abstract final PagingStatus pagingStatus;
-  abstract final List<T> paginatedList;
-  abstract final E? asyncError;
 
   AsyncPagedState<T, E> copyWith({
-    AsyncViewState? asyncViewState,
+    AsyncValue<List<T>>? asyncValue,
     PagingStatus? pagingStatus,
-    List<T>? paginatedList,
-    E? asyncError,
   });
 }
 
-enum AsyncViewState {
-  idle,
-  loading,
-  success,
-  error;
-
-  ///render a widget according to [AsyncViewState] value
-  Widget when({
-    required Widget Function() idle,
-    required Widget Function() loading,
-    required Widget Function() success,
-    required Widget Function() error,
-  }) =>
-      switch (this) {
-        AsyncViewState.idle => idle(),
-        AsyncViewState.loading => loading(),
-        AsyncViewState.success => success(),
-        AsyncViewState.error => error(),
-      };
-}
 
 enum PagingStatus {
   idle,
@@ -47,8 +23,9 @@ enum PagingStatus {
   paginationCompleted,
   paginationExhausted;
 
+/// return true if current pagination loading is ended
   get isPaginationCompleted => this == paginationCompleted;
-
+/// return true if is no more items from source
   get hasReachedMax => this == paginationExhausted;
 }
 ///Provides an easy and reusable way to request paginated data
@@ -83,7 +60,8 @@ State extends AsyncPagedState<Type, Error>> on Bloc<Event,State> {
   ///```
   ///
   Future<void> pager(
-      {required Event event,
+      {
+        required Event event,
         required Emitter<AsyncPagedState<Type, Error>> emit,
         ///Is a function from data layer that return an Either<L,R>
         required Future<Either<Error?, List<Type>>> Function(
@@ -95,19 +73,17 @@ State extends AsyncPagedState<Type, Error>> on Bloc<Event,State> {
     emit(state.copyWith(pagingStatus: PagingStatus.paginating));
     if (state.pagingStatus == PagingStatus.paginationExhausted) return;
     // check if is first loading
-    if (state.asyncViewState == AsyncViewState.idle) {
+    if (state.asyncValue == const AsyncValue.initial()) {
       //emit loading status
-      emit(state.copyWith(asyncViewState: AsyncViewState.loading));
+      emit(state.copyWith(asyncValue: const AsyncValue.loading()));
       final response = await useCase(pageSize, page);
       response.fold((error) {
         return emit(state.copyWith(
-            asyncError: error,
-            asyncViewState: AsyncViewState.error,
+            asyncValue: AsyncValue.error(error!),
             pagingStatus: PagingStatus.paginationCompleted));
       }, (data) {
         return emit(state.copyWith(
-          paginatedList: data,
-          asyncViewState: AsyncViewState.success,
+          asyncValue: AsyncData(data),
           pagingStatus: PagingStatus.paginationCompleted,
         ));
       });
@@ -116,13 +92,12 @@ State extends AsyncPagedState<Type, Error>> on Bloc<Event,State> {
       final response = await useCase(pageSize, page);
       response.fold((error) {
         return emit(state.copyWith(
-            asyncError: error, asyncViewState: AsyncViewState.error));
+            asyncValue: AsyncError(error!)));
       }, (data) {
         return emit((data.isEmpty || data.length < pageSize)
             ? state.copyWith(pagingStatus: PagingStatus.paginationExhausted)
             : state.copyWith(
-          paginatedList: [...state.paginatedList, ...data],
-          asyncViewState: AsyncViewState.success,
+          asyncValue: AsyncData([...state.asyncValue.getOrNull!.value, ...data]) ,
           pagingStatus: PagingStatus.paginationCompleted,
         ));
       });
